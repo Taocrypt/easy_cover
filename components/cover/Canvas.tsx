@@ -110,6 +110,7 @@ export default function Canvas() {
               fontSize: `${text.fontSize}px`,
               color: text.color,
               fontWeight: text.fontWeight,
+              fontFamily: text.font,
               WebkitTextStroke: text.strokeWidth > 0 ? `${text.strokeWidth}px ${text.strokeColor}` : undefined,
           }}
       >

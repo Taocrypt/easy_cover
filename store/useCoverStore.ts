@@ -20,6 +20,8 @@ interface TextSettings {
   x: number;
   y: number;
   rotation: number;
+  // Font settings
+  font: string;
   // Split settings
   isSplit: boolean;
   leftOffsetX: number;
@@ -98,6 +100,7 @@ export const useCoverStore = create<CoverState>((set) => ({
     x: 0,
     y: 0,
     rotation: 0,
+    font: 'Inter, sans-serif',
     isSplit: false,
     leftOffsetX: 0,
     leftOffsetY: 0,

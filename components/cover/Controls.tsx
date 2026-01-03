@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { IconPicker } from '@/components/cover/IconPicker';
 import { Separator } from '@/components/ui/separator';
-import { Download, RotateCcw, Maximize, Github, ExternalLink, Settings2 } from 'lucide-react';
+import { Download, RotateCcw, Maximize, Github, ExternalLink, Settings2, Link as LinkIcon, Link2, Upload } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
 // Helper component for Reset Button
@@ -37,6 +37,34 @@ const SPLIT_PRESETS = [
     { name: '对角分离', left: { x: -40, y: -40 }, right: { x: 40, y: 40 } },
     { name: '聚拢', left: { x: 20, y: 0 }, right: { x: -20, y: 0 } },
 ];
+
+const FONTS = [
+    { name: 'Inter (默认)', value: 'Inter, sans-serif', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+    { name: 'MiSans', value: 'MiSans, sans-serif', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+    { name: 'HarmonyOS Sans', value: '"HarmonyOS Sans", sans-serif', weights: [100, 400, 700] },
+    { name: '得意黑 (Smiley Sans)', value: 'SmileySans, sans-serif', weights: [400] },
+    { name: 'OPPO Sans', value: 'OPPOSans, sans-serif', weights: [400] },
+    { name: 'Geist Sans', value: 'var(--font-geist-sans), sans-serif', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+    { name: 'Geist Mono', value: 'var(--font-geist-mono), monospace', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+    { name: 'Arial', value: 'Arial, sans-serif', weights: [400, 700] },
+    { name: 'Times New Roman', value: '"Times New Roman", serif', weights: [400, 700] },
+    { name: 'Courier New', value: '"Courier New", monospace', weights: [400, 700] },
+    { name: '微软雅黑', value: '"Microsoft YaHei", sans-serif', weights: [300, 400, 700] },
+    { name: '黑体', value: 'SimHei, sans-serif', weights: [400] },
+    { name: '楷体', value: 'KaiTi, serif', weights: [400] },
+];
+
+const WEIGHTS = {
+    100: 'Thin (100)',
+    200: 'ExtraLight (200)',
+    300: 'Light (300)',
+    400: 'Regular (400)',
+    500: 'Medium (500)',
+    600: 'SemiBold (600)',
+    700: 'Bold (700)',
+    800: 'ExtraBold (800)',
+    900: 'Black (900)',
+};
 
 const SliderWithInput = ({ 
     label, 
@@ -94,6 +122,23 @@ export default function Controls() {
     if (file) {
       const url = URL.createObjectURL(file);
       store.updateIcon({ customIconUrl: url });
+    }
+  };
+
+  const handleFontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        try {
+            const fontName = `CustomFont_${Date.now()}`;
+            const url = URL.createObjectURL(file);
+            const font = new FontFace(fontName, `url(${url})`);
+            await font.load();
+            document.fonts.add(font);
+            store.updateText({ font: fontName });
+        } catch (err) {
+            console.error('Failed to load font', err);
+            alert('字体加载失败，请尝试其他字体文件');
+        }
     }
   };
 
@@ -192,6 +237,25 @@ export default function Controls() {
   };
 
   const [activeTab, setActiveTab] = React.useState('picker');
+  const [syncOffsets, setSyncOffsets] = React.useState(true);
+
+  // Sync effect for left offset changes
+  const handleLeftOffsetChange = (axis: 'x' | 'y', val: number) => {
+      const updates: any = { [axis === 'x' ? 'leftOffsetX' : 'leftOffsetY']: val };
+      if (syncOffsets) {
+          updates[axis === 'x' ? 'rightOffsetX' : 'rightOffsetY'] = -val;
+      }
+      store.updateText(updates);
+  };
+
+  // Sync effect for right offset changes
+  const handleRightOffsetChange = (axis: 'x' | 'y', val: number) => {
+      const updates: any = { [axis === 'x' ? 'rightOffsetX' : 'rightOffsetY']: val };
+      if (syncOffsets) {
+          updates[axis === 'x' ? 'leftOffsetX' : 'leftOffsetY'] = -val;
+      }
+      store.updateText(updates);
+  };
 
   return (
     <div className="w-full md:w-80 h-1/2 md:h-full border-t md:border-t-0 md:border-r bg-background flex flex-col shadow-lg z-10">
@@ -254,6 +318,66 @@ export default function Controls() {
             </div>
             
             <div className="space-y-2">
+               <Label>字体</Label>
+               <div className="flex gap-2">
+                   <Select value={store.text.font.startsWith('CustomFont') ? 'custom' : store.text.font} onValueChange={(v) => {
+                       if (v !== 'custom') store.updateText({ font: v });
+                   }}>
+                       <SelectTrigger className="flex-1">
+                           <SelectValue placeholder="选择字体" />
+                       </SelectTrigger>
+                       <SelectContent>
+                           {FONTS.map((font) => (
+                               <SelectItem key={font.name} value={font.value} style={{ fontFamily: font.value }}>
+                                   {font.name}
+                               </SelectItem>
+                           ))}
+                           {store.text.font.startsWith('CustomFont') && (
+                               <SelectItem value="custom">自定义字体</SelectItem>
+                           )}
+                       </SelectContent>
+                   </Select>
+                   
+                   <div className="relative">
+                       <Input 
+                           type="file" 
+                           accept=".ttf,.otf,.woff,.woff2" 
+                           className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                           onChange={handleFontUpload}
+                           title="上传字体"
+                       />
+                       <Button variant="outline" size="icon" className="w-10 px-0">
+                           <Upload className="h-4 w-4" />
+                       </Button>
+                   </div>
+               </div>
+            </div>
+
+            <div className="space-y-2">
+               <div className="flex justify-between items-center">
+                   <Label>字重 ({store.text.fontWeight})</Label>
+                   <ResetButton onClick={() => store.updateText({ fontWeight: 700 })} />
+               </div>
+               <Select value={String(store.text.fontWeight)} onValueChange={(v) => store.updateText({ fontWeight: parseInt(v) })}>
+                   <SelectTrigger>
+                       <SelectValue placeholder="选择字重" />
+                   </SelectTrigger>
+                   <SelectContent>
+                       {(() => {
+                           const currentFont = FONTS.find(f => f.value === store.text.font);
+                           const availableWeights = currentFont?.weights || [100, 200, 300, 400, 500, 600, 700, 800, 900];
+                           
+                           return availableWeights.map(w => (
+                               <SelectItem key={w} value={String(w)}>
+                                   {WEIGHTS[w as keyof typeof WEIGHTS]}
+                               </SelectItem>
+                           ));
+                       })()}
+                   </SelectContent>
+               </Select>
+            </div>
+
+            <div className="space-y-2">
               <div className="flex justify-between items-center">
                  <Label>大小 ({store.text.fontSize}px)</Label>
                  <ResetButton onClick={() => store.updateText({ fontSize: 160 })} />
@@ -290,6 +414,84 @@ export default function Controls() {
                <Label>描边颜色</Label>
                <ColorPicker color={store.text.strokeColor} onChange={(c) => store.updateText({ strokeColor: c })} />
             </div>
+
+            <div className="flex items-center justify-between">
+               <Label htmlFor="text-split">文字错位 / 分离</Label>
+               <Switch 
+                 id="text-split" 
+                 checked={store.text.isSplit} 
+                 onCheckedChange={(c) => store.updateText({ isSplit: c })} 
+               />
+            </div>
+
+            {store.text.isSplit && (
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg border">
+                    <div className="grid grid-cols-3 gap-1 mb-2">
+                        {SPLIT_PRESETS.map((preset) => (
+                            <Button
+                                key={preset.name}
+                                variant="outline"
+                                size="sm"
+                                className="text-[10px] h-6 px-1"
+                                onClick={() => store.updateText({
+                                    leftOffsetX: preset.left.x,
+                                    leftOffsetY: preset.left.y,
+                                    rightOffsetX: preset.right.x,
+                                    rightOffsetY: preset.right.y
+                                })}
+                            >
+                                {preset.name}
+                            </Button>
+                        ))}
+                    </div>
+
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between px-1 pb-2">
+                            <Label htmlFor="sync-offsets" className="text-xs font-medium">同步调整 (中心对称)</Label>
+                            <Switch 
+                                id="sync-offsets" 
+                                checked={syncOffsets} 
+                                onCheckedChange={setSyncOffsets} 
+                                className="scale-75 origin-right"
+                            />
+                        </div>
+
+                        <Label className="text-xs font-semibold">左侧文字</Label>
+                        <SliderWithInput 
+                            label="水平偏移" 
+                            value={store.text.leftOffsetX} 
+                            min={-200} 
+                            max={200} 
+                            onChange={(v) => handleLeftOffsetChange('x', v)} 
+                        />
+                        <SliderWithInput 
+                            label="垂直偏移" 
+                            value={store.text.leftOffsetY} 
+                            min={-200} 
+                            max={200} 
+                            onChange={(v) => handleLeftOffsetChange('y', v)} 
+                        />
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-dashed">
+                        <Label className="text-xs font-semibold">右侧文字</Label>
+                        <SliderWithInput 
+                            label="水平偏移" 
+                            value={store.text.rightOffsetX} 
+                            min={-200} 
+                            max={200} 
+                            onChange={(v) => handleRightOffsetChange('x', v)} 
+                        />
+                        <SliderWithInput 
+                            label="垂直偏移" 
+                            value={store.text.rightOffsetY} 
+                            min={-200} 
+                            max={200} 
+                            onChange={(v) => handleRightOffsetChange('y', v)} 
+                        />
+                    </div>
+                </div>
+            )}
 
             <div className="space-y-2">
                <div className="flex justify-between items-center">

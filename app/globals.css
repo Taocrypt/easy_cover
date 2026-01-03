@@ -1,6 +1,20 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@font-face {
+  font-family: 'SmileySans';
+  src: url('/fonts/SmileySans-Oblique.ttf.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'OPPOSans';
+  src: url('/fonts/OPPO Sans 4.0.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
