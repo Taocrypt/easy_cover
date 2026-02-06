@@ -112,6 +112,7 @@ export default function Controls() {
   const PRESET_STORAGE_KEY = 'easycover:preset:v1';
   const [hasPreset, setHasPreset] = React.useState(false);
   const [configCode, setConfigCode] = React.useState('');
+  const [isConfigEditing, setIsConfigEditing] = React.useState(false);
 
   const sanitizeUrl = (url: string) => {
     if (!url) return '';
@@ -277,12 +278,15 @@ export default function Controls() {
   }, []);
 
   // Keep configCode in sync with current settings
+  // Important: do NOT overwrite when user is typing/pasting long codes.
   React.useEffect(() => {
+    if (isConfigEditing) return;
     const t = setTimeout(() => {
       setConfigCode(encodePreset(buildPreset()));
     }, 120);
     return () => clearTimeout(t);
   }, [
+    isConfigEditing,
     store.selectedRatios,
     store.showRuler,
     store.text,
@@ -538,7 +542,10 @@ export default function Controls() {
                   className="h-8 text-xs"
                   value={configCode}
                   placeholder="粘贴剪贴板内容或配置串"
+                  onFocus={() => setIsConfigEditing(true)}
+                  onBlur={() => setIsConfigEditing(false)}
                   onChange={(e) => {
+                    setIsConfigEditing(true);
                     const raw = e.target.value.trim();
                     // Accept: EasyCover_YYYYMMDD_hhmmss_CODE or CODE(.png)
                     let code = raw;
@@ -548,6 +555,7 @@ export default function Controls() {
                     setConfigCode(code.trim());
                   }}
                   onPaste={(e) => {
+                    setIsConfigEditing(true);
                     const text = e.clipboardData.getData('text');
                     if (!text) return;
                     let code = text.trim();
@@ -556,9 +564,17 @@ export default function Controls() {
                     if (m) code = m[1];
                     code = code.trim();
                     if (!code) return;
-                    setConfigCode(code);
+
+                    // Apply immediately, then stop editing so auto-sync can resume.
                     const preset = decodePreset(code);
-                    if (preset) store.applyPreset(preset);
+                    if (preset) {
+                      setConfigCode(code);
+                      store.applyPreset(preset);
+                      setIsConfigEditing(false);
+                    } else {
+                      // Still set the extracted code so user can retry.
+                      setConfigCode(code);
+                    }
                     e.preventDefault();
                   }}
                 />

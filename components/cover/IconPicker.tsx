@@ -87,9 +87,13 @@ export function IconPicker({ value, onChange, onPickImageUrl }: IconPickerProps)
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
+    // Fetch -> blob -> objectURL to avoid CORS-tainted canvas and make cut differences real.
+    const resp = await fetch(newArtWorkUrl);
+    const blob = await resp.blob();
+    const objUrl = URL.createObjectURL(blob);
+
     const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = newArtWorkUrl;
+    img.src = objUrl;
 
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
@@ -97,6 +101,7 @@ export function IconPicker({ value, onChange, onPickImageUrl }: IconPickerProps)
     });
 
     ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(objUrl);
 
     // Cut mode '1' applies the same official rounded mask path as HQ-ICON
     if (cut === '1') {
@@ -131,9 +136,22 @@ export function IconPicker({ value, onChange, onPickImageUrl }: IconPickerProps)
   ];
 
   const debouncedQuery = useDebounceValue(query, 500);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Debounced search (typing)
+  useEffect(() => {
+    setSearchTerm(debouncedQuery.trim());
+  }, [debouncedQuery]);
+
+  // When App Store options change, refresh results immediately
+  useEffect(() => {
+    if (source !== 'appstore') return;
+    if (!query.trim()) return;
+    setSearchTerm(query.trim());
+  }, [appStoreOptions, source]);
 
   useEffect(() => {
-    if (!debouncedQuery) {
+    if (!searchTerm) {
       if (source === 'iconify') setIcons(featuredIcons);
       if (source === 'appstore') setApps([]);
       return;
@@ -144,14 +162,14 @@ export function IconPicker({ value, onChange, onPickImageUrl }: IconPickerProps)
       try {
         if (source === 'iconify') {
           const res = await fetch(
-            `https://api.iconify.design/search?query=${encodeURIComponent(debouncedQuery)}&limit=50`
+            `https://api.iconify.design/search?query=${encodeURIComponent(searchTerm)}&limit=50`
           );
           const data = await res.json();
           if (data.icons) setIcons(data.icons);
         } else {
           // Reference: HQ-ICON project (iTunes Search API)
           const url = `https://itunes.apple.com/search?term=${encodeURIComponent(
-            debouncedQuery
+            searchTerm
           )}&country=${encodeURIComponent(appStoreOptions.country)}&entity=${encodeURIComponent(appStoreOptions.entity)}&limit=50`;
           const res = await fetch(url);
           const data = await res.json();
@@ -179,7 +197,7 @@ export function IconPicker({ value, onChange, onPickImageUrl }: IconPickerProps)
     };
 
     run();
-  }, [debouncedQuery, source]);
+  }, [searchTerm, source, appStoreOptions]);
 
   // Initial load
   useEffect(() => {
@@ -207,6 +225,7 @@ export function IconPicker({ value, onChange, onPickImageUrl }: IconPickerProps)
               onClick={() => {
                 setSource('iconify');
                 setQuery('');
+                setSearchTerm('');
                 setIcons(featuredIcons);
                 setApps([]);
               }}
@@ -223,6 +242,7 @@ export function IconPicker({ value, onChange, onPickImageUrl }: IconPickerProps)
               onClick={() => {
                 setSource('appstore');
                 setQuery('');
+                setSearchTerm('');
                 setApps([]);
               }}
               title="App Store"
@@ -292,6 +312,12 @@ export function IconPicker({ value, onChange, onPickImageUrl }: IconPickerProps)
               className="pl-8"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  setSearchTerm(query.trim());
+                }
+              }}
             />
           </div>
         </div>
