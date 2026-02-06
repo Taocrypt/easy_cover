@@ -376,8 +376,27 @@ export default function Controls() {
       setConfigCode(code);
 
       const safeCode = code.replace(/[^a-zA-Z0-9_-]/g, '');
-      // Use code as filename to keep it short and easy to copy/paste
-      const fileName = `${safeCode}.png`;
+
+      // Use a short, stable filename; write config info to clipboard instead.
+      const ts = new Date();
+      const stamp = `${ts.getFullYear()}${String(ts.getMonth() + 1).padStart(2, '0')}${String(ts.getDate()).padStart(2, '0')}_${String(ts.getHours()).padStart(2, '0')}${String(ts.getMinutes()).padStart(2, '0')}${String(ts.getSeconds()).padStart(2, '0')}`;
+      const fileName = `EasyCover_${stamp}.png`;
+
+      const clipText = `EasyCover_${stamp}_${safeCode}`;
+      try {
+        await navigator.clipboard.writeText(clipText);
+      } catch {
+        // Fallback for insecure contexts / permission denied
+        const ta = document.createElement('textarea');
+        ta.value = clipText;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
 
       const link = document.createElement('a');
       link.download = fileName;
@@ -520,6 +539,22 @@ export default function Controls() {
                   value={configCode}
                   placeholder="粘贴导出文件名里的那串字符（base64url）"
                   onChange={(e) => setConfigCode(e.target.value.trim())}
+                  onPaste={(e) => {
+                    const text = e.clipboardData.getData('text');
+                    if (!text) return;
+                    const trimmed = text.trim();
+                    // Accept: EasyCover_YYYYMMDD_hhmmss_CODE or CODE.png
+                    let code = trimmed;
+                    if (code.endsWith('.png')) code = code.slice(0, -4);
+                    const lastUnderscore = code.lastIndexOf('_');
+                    if (lastUnderscore > -1) code = code.slice(lastUnderscore + 1);
+                    code = code.trim();
+                    if (!code) return;
+                    setConfigCode(code);
+                    const preset = decodePreset(code);
+                    if (preset) store.applyPreset(preset);
+                    e.preventDefault();
+                  }}
                 />
                 <Button
                   type="button"
@@ -840,7 +875,10 @@ export default function Controls() {
                         value={store.icon.name} 
                         onChange={(v) => {
                             store.updateIcon({ name: v, customIconUrl: undefined }); // Clear custom icon when picking new one
-                        }} 
+                        }}
+                        onPickImageUrl={(url) => {
+                            store.updateIcon({ customIconUrl: url });
+                        }}
                       />
                       <div className="text-center pt-1">
                           <button 
