@@ -537,17 +537,27 @@ export default function Controls() {
                 <Input
                   className="h-8 text-xs"
                   value={configCode}
-                  placeholder="粘贴导出文件名里的那串字符（base64url）"
-                  onChange={(e) => setConfigCode(e.target.value.trim())}
+                  placeholder="粘贴剪贴板内容或配置串"
+                  onChange={(e) => {
+                    const raw = e.target.value.trim();
+                    // Accept: EasyCover_YYYYMMDD_hhmmss_CODE or CODE(.png)
+                    let code = raw;
+                    if (code.endsWith('.png')) code = code.slice(0, -4);
+                    if (code.startsWith('EasyCover_')) {
+                      const lastUnderscore = code.lastIndexOf('_');
+                      if (lastUnderscore > -1) code = code.slice(lastUnderscore + 1);
+                    }
+                    setConfigCode(code);
+                  }}
                   onPaste={(e) => {
                     const text = e.clipboardData.getData('text');
                     if (!text) return;
-                    const trimmed = text.trim();
-                    // Accept: EasyCover_YYYYMMDD_hhmmss_CODE or CODE.png
-                    let code = trimmed;
+                    let code = text.trim();
                     if (code.endsWith('.png')) code = code.slice(0, -4);
-                    const lastUnderscore = code.lastIndexOf('_');
-                    if (lastUnderscore > -1) code = code.slice(lastUnderscore + 1);
+                    if (code.startsWith('EasyCover_')) {
+                      const lastUnderscore = code.lastIndexOf('_');
+                      if (lastUnderscore > -1) code = code.slice(lastUnderscore + 1);
+                    }
                     code = code.trim();
                     if (!code) return;
                     setConfigCode(code);
@@ -571,7 +581,7 @@ export default function Controls() {
                 </Button>
               </div>
               <div className="text-[10px] text-muted-foreground leading-snug">
-                提示：如果你是从文件名复制，请只取字符串部分（不要包含 .png）。
+                提示：导出封面时会自动把配置串写入到剪切板。
               </div>
             </div>
             
