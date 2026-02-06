@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   title: "EasyCover - Taocrypt",
   description: "简单、优雅的纯客户端封面图生成器。无需上传，保护隐私。",
   icons: {
-    icon: "https://q2.qlogo.cn/headimg_dl?dst_uin=2726730791&spec=0",
+    icon: "/favicon.ico",
   },
 };
 

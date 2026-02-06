@@ -1316,7 +1316,7 @@ export default function Controls() {
               onTouchEnd={(e) => (e.currentTarget as HTMLButtonElement).blur()}
               style={{ WebkitTapHighlightColor: 'transparent' } as any}
             >
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="w-4 h-4" />
               导出封面
             </Button>
           </div>
