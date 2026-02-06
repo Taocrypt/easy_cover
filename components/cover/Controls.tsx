@@ -287,25 +287,29 @@ export default function Controls() {
   const [activeTab, setActiveTab] = React.useState('picker');
   const [syncOffsets, setSyncOffsets] = React.useState(true);
 
-  // Mobile collapse/expand
-  const [collapsed, setCollapsed] = React.useState(false);
-  const touchStartY = React.useRef<number | null>(null);
+  // Auto-collapse header on scroll (mobile friendly)
+  const scrollAreaRootRef = React.useRef<HTMLDivElement | null>(null);
+  const [headerCollapsed, setHeaderCollapsed] = React.useState(false);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches?.[0]?.clientY ?? null;
-  };
+  React.useEffect(() => {
+    const root = scrollAreaRootRef.current;
+    if (!root) return;
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const startY = touchStartY.current;
-    const endY = e.changedTouches?.[0]?.clientY;
-    touchStartY.current = null;
-    if (startY == null || endY == null) return;
+    const viewport = root.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLDivElement | null;
+    if (!viewport) return;
 
-    const deltaY = endY - startY;
-    // swipe up to collapse; swipe down to expand
-    if (deltaY < -60) setCollapsed(true);
-    if (deltaY > 60) setCollapsed(false);
-  };
+    const onScroll = () => {
+      const top = viewport.scrollTop;
+      if (top <= 0) setHeaderCollapsed(false);
+      else if (top > 20) setHeaderCollapsed(true);
+    };
+
+    viewport.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => viewport.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Sync effect for left offset changes
   const handleLeftOffsetChange = (axis: 'x' | 'y', val: number) => {
@@ -326,48 +330,21 @@ export default function Controls() {
   };
 
   return (
-    <div
-      className={
-        "w-full md:w-80 border-t md:border-t-0 md:border-r bg-background flex flex-col shadow-lg z-10 " +
-        (collapsed ? "h-10" : "h-1/2 md:h-full")
-      }
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
-      <div className="p-4 border-b">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">
-              EasyCover - Taocrypt
-            </h1>
-            <p className="text-xs text-muted-foreground mt-1">
-              简单、优雅的纯客户端封面图生成器。无需上传，保护隐私。
-            </p>
-          </div>
-
-          {/* Collapse toggle (useful on mobile) */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2 text-xs"
-            onClick={() => setCollapsed((v) => !v)}
-            title="上滑自动折叠/下滑展开"
-          >
-            {collapsed ? '展开' : '折叠'}
-          </Button>
-        </div>
-
-        {collapsed && (
-          <div className="mt-2 text-[10px] text-muted-foreground">
-            上滑自动折叠 / 下滑展开
-          </div>
+    <div className="w-full md:w-80 h-1/2 md:h-full border-t md:border-t-0 md:border-r bg-background flex flex-col shadow-lg z-10">
+      <div className={(headerCollapsed ? "p-2" : "p-4") + " border-b transition-all duration-200"}>
+        <h1 className={(headerCollapsed ? "text-base" : "text-xl") + " font-bold flex items-center gap-2"}>
+          EasyCover - Taocrypt
+        </h1>
+        {!headerCollapsed && (
+          <p className="text-xs text-muted-foreground mt-1">
+            简单、优雅的纯客户端封面图生成器。无需上传，保护隐私。
+          </p>
         )}
       </div>
       
-      {!collapsed && (
-        <div className="flex-1 min-h-0 w-full">
-          <ScrollArea className="h-full">
-              <div className="p-4 space-y-6">
+      <div className="flex-1 min-h-0 w-full">
+        <ScrollArea ref={scrollAreaRootRef} className="h-full">
+            <div className="p-4 space-y-6">
           
           {/* Layout Section */}
           <section className="space-y-3">
@@ -1047,26 +1024,39 @@ export default function Controls() {
             )}
           </section>
 
-          </div>
-        </ScrollArea>
         </div>
-      )}
+      </ScrollArea>
+      </div>
 
-      {!collapsed && (
-        <div className="p-2 md:p-4 border-t bg-gray-50 dark:bg-gray-950 space-y-2 md:space-y-4">
+      <div className="p-2 md:p-4 border-t bg-gray-50 dark:bg-gray-950 space-y-2 md:space-y-4">
           <div className="flex gap-2">
             <Button
-              onClick={handleSaveOrClearPreset}
+              onClick={(e) => {
+                handleSaveOrClearPreset();
+                (e.currentTarget as HTMLButtonElement).blur();
+              }}
+              onPointerUp={(e) => (e.currentTarget as HTMLButtonElement).blur()}
+              onTouchEnd={(e) => (e.currentTarget as HTMLButtonElement).blur()}
               className={
-                "h-9 px-3 text-xs border " +
-                (hasPreset ? "bg-white text-black border-black/20" : "bg-black text-white border-black")
+                "h-9 flex-1 text-xs border " +
+                (hasPreset
+                  ? "bg-white text-black border-black/20"
+                  : "bg-black text-white border-black")
               }
               title={hasPreset ? '清除本地预设' : '保存当前为本地预设'}
             >
-              保存/清除预设
+              {hasPreset ? '清除预设' : '保存预设'}
             </Button>
 
-            <Button className="h-9 flex-1" onClick={handleExport}>
+            <Button
+              className="h-9 flex-1"
+              onClick={(e) => {
+                handleExport();
+                (e.currentTarget as HTMLButtonElement).blur();
+              }}
+              onPointerUp={(e) => (e.currentTarget as HTMLButtonElement).blur()}
+              onTouchEnd={(e) => (e.currentTarget as HTMLButtonElement).blur()}
+            >
               <Download className="w-4 h-4 mr-2" />
               导出封面图
             </Button>
@@ -1078,8 +1068,7 @@ export default function Controls() {
               GitHub 开源仓库
             </a>
           </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
