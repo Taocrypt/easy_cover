@@ -1,0 +1,224 @@
+diff --git a/components/cover/Controls.tsx b/components/cover/Controls.tsx
+index ffb68ce..fdb8b63 100644
+--- a/components/cover/Controls.tsx
++++ b/components/cover/Controls.tsx
+@@ -128,27 +128,126 @@ export default function Controls() {
+     background: { ...store.background, imageUrl: sanitizeUrl(store.background.imageUrl || '') },
+   });
+ 
+-  const encodePreset = (preset: CoverPreset) => {
+-    const json = JSON.stringify(preset);
+-    // base64url
+-    const b64 = btoa(unescape(encodeURIComponent(json)))
++  // Default preset used for diff-based encoding (shorter strings)
++  const DEFAULT_PRESET: CoverPreset = {
++    selectedRatios: ['16:9'],
++    showRuler: true,
++    text: {
++      content: '封面标题',
++      fontSize: 160,
++      color: '#000000',
++      strokeColor: '#ffffff',
++      strokeWidth: 0,
++      fontWeight: 700,
++      x: 0,
++      y: 0,
++      rotation: 0,
++      font: 'Inter, sans-serif',
++      isSplit: false,
++      splitIndex: -1,
++      splitSeparator: '|',
++      leftOffsetX: 0,
++      leftOffsetY: 0,
++      rightOffsetX: 0,
++      rightOffsetY: 0,
++    },
++    icon: {
++      name: 'logos:react',
++      size: 120,
++      color: '#000000',
++      shadow: true,
++      x: 0,
++      y: 0,
++      rotation: 0,
++      bgShape: 'rounded-square',
++      bgColor: '#ffffff',
++      padding: 40,
++      radius: 40,
++      shadowColor: 'rgba(0,0,0,0.3)',
++      shadowBlur: 6,
++      shadowOffsetY: 4,
++      bgOpacity: 1,
++      bgBlur: 0,
++      customIconRadius: 0,
++      customIconUrl: '',
++    },
++    background: {
++      type: 'solid',
++      color: '#f3f4f6',
++      imageUrl: '',
++      blur: 0,
++      radius: 0,
++      shadow: false,
++      opacity: 1,
++      shadowColor: 'rgba(0,0,0,0.3)',
++      shadowBlur: 30,
++      shadowOffsetY: 10,
++      scale: 1,
++      positionX: 50,
++      positionY: 50,
++      rotation: 0,
++    },
++  };
++
++  const deepDiff = (base: any, next: any): any => {
++    if (base === next) return undefined;
++    if (typeof base !== 'object' || typeof next !== 'object' || !base || !next) return next;
++    if (Array.isArray(base) && Array.isArray(next)) {
++      if (base.length === next.length && base.every((v, i) => v === next[i])) return undefined;
++      return next;
++    }
++    const out: any = {};
++    const keys = new Set([...Object.keys(base), ...Object.keys(next)]);
++    for (const k of keys) {
++      const d = deepDiff(base[k], next[k]);
++      if (d !== undefined) out[k] = d;
++    }
++    return Object.keys(out).length ? out : undefined;
++  };
++
++  const deepMerge = (base: any, patch: any): any => {
++    if (patch === undefined) return base;
++    if (typeof base !== 'object' || typeof patch !== 'object' || !base || !patch) return patch;
++    if (Array.isArray(patch)) return patch;
++    const out: any = { ...base };
++    for (const k of Object.keys(patch)) out[k] = deepMerge(base[k], patch[k]);
++    return out;
++  };
++
++  const b64urlEncode = (obj: any) => {
++    const json = JSON.stringify(obj);
++    return btoa(unescape(encodeURIComponent(json)))
+       .replace(/\+/g, '-')
+       .replace(/\//g, '_')
+       .replace(/=+$/g, '');
+-    return b64;
++  };
++
++  const b64urlDecode = (code: string) => {
++    const b64 = code.replace(/-/g, '+').replace(/_/g, '/');
++    const pad = b64.length % 4 === 0 ? '' : '='.repeat(4 - (b64.length % 4));
++    const json = decodeURIComponent(escape(atob(b64 + pad)));
++    return JSON.parse(json);
++  };
++
++  const encodePreset = (preset: CoverPreset) => {
++    const normalized: CoverPreset = {
++      ...preset,
++      icon: { ...preset.icon, customIconUrl: sanitizeUrl(preset.icon.customIconUrl || '') } as any,
++      background: { ...preset.background, imageUrl: sanitizeUrl(preset.background.imageUrl || '') } as any,
++    };
++    const diff = deepDiff(DEFAULT_PRESET, normalized) || {};
++    return b64urlEncode({ v: 1, d: diff });
+   };
+ 
+   const decodePreset = (code: string): CoverPreset | null => {
+     try {
+-      const b64 = code.replace(/-/g, '+').replace(/_/g, '/');
+-      const pad = b64.length % 4 === 0 ? '' : '='.repeat(4 - (b64.length % 4));
+-      const json = decodeURIComponent(escape(atob(b64 + pad)));
+-      const preset = JSON.parse(json) as CoverPreset;
+-      if (!preset || !preset.text || !preset.icon || !preset.background || !preset.selectedRatios) return null;
++      const obj = b64urlDecode(code);
++      if (!obj || obj.v !== 1) return null;
++      const merged = deepMerge(DEFAULT_PRESET, obj.d || {});
+       // Defensive: strip blob urls even if present
+-      preset.icon = { ...preset.icon, customIconUrl: sanitizeUrl(preset.icon.customIconUrl || '') } as any;
+-      preset.background = { ...preset.background, imageUrl: sanitizeUrl(preset.background.imageUrl || '') } as any;
+-      return preset;
++      merged.icon = { ...merged.icon, customIconUrl: sanitizeUrl(merged.icon.customIconUrl || '') };
++      merged.background = { ...merged.background, imageUrl: sanitizeUrl(merged.background.imageUrl || '') };
++      return merged as CoverPreset;
+     } catch {
+       return null;
+     }
+@@ -160,13 +259,13 @@ export default function Controls() {
+       const raw = localStorage.getItem(PRESET_STORAGE_KEY);
+       if (!raw) {
+         setHasPreset(false);
++        setConfigCode(encodePreset(buildPreset()));
+         return;
+       }
+       const preset = JSON.parse(raw) as CoverPreset;
+       if (preset && preset.text && preset.icon && preset.background && preset.selectedRatios) {
+         store.applyPreset(preset);
+         setHasPreset(true);
+-        setConfigCode(encodePreset(buildPreset()));
+       } else {
+         setHasPreset(false);
+       }
+@@ -177,6 +276,20 @@ export default function Controls() {
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, []);
+ 
++  // Keep configCode in sync with current settings
++  React.useEffect(() => {
++    const t = setTimeout(() => {
++      setConfigCode(encodePreset(buildPreset()));
++    }, 120);
++    return () => clearTimeout(t);
++  }, [
++    store.selectedRatios,
++    store.showRuler,
++    store.text,
++    store.icon,
++    store.background,
++  ]);
++
+   const handleSaveOrClearPreset = () => {
+     try {
+       if (hasPreset) {
+@@ -263,10 +376,8 @@ export default function Controls() {
+       setConfigCode(code);
+ 
+       const safeCode = code.replace(/[^a-zA-Z0-9_-]/g, '');
+-      const ts = new Date();
+-      const stamp = `${ts.getFullYear()}${String(ts.getMonth() + 1).padStart(2, '0')}${String(ts.getDate()).padStart(2, '0')}_${String(ts.getHours()).padStart(2, '0')}${String(ts.getMinutes()).padStart(2, '0')}${String(ts.getSeconds()).padStart(2, '0')}`;
+-      // Note: filenames too long may be truncated by OS; still keep code for copy/paste.
+-      const fileName = `easy-cover_${stamp}_${safeCode}.png`;
++      // Use code as filename to keep it short and easy to copy/paste
++      const fileName = `${safeCode}.png`;
+ 
+       const link = document.createElement('a');
+       link.download = fileName;
+@@ -402,7 +513,7 @@ export default function Controls() {
+ 
+             {/* Config code import/export */}
+             <div className="space-y-2">
+-              <Label className="text-xs">配置串（导出文件名里也会带）</Label>
++              <Label className="text-xs">配置串</Label>
+               <div className="flex gap-2">
+                 <Input
+                   className="h-8 text-xs"
+@@ -425,7 +536,7 @@ export default function Controls() {
+                 </Button>
+               </div>
+               <div className="text-[10px] text-muted-foreground leading-snug">
+-                提示：如果你是从文件名复制，请只取最后一段很长的字符串（不要包含 .png）。
++                提示：如果你是从文件名复制，请只取字符串部分（不要包含 .png）。
+               </div>
+             </div>
+             
+diff --git a/app/layout.tsx b/app/layout.tsx
+index ebba74b..0d3dd6d 100644
+--- a/app/layout.tsx
++++ b/app/layout.tsx
+@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
+ 
+ export const metadata: Metadata = {
+   title: "EasyCover - Taocrypt",
+-  description: "简单、优雅的纯客户端封面图生成器。无需上传，保护隐私。",
++  description: "简单、优雅的纯客户端封面图生成器。无需上传，保护隐私。",
+   icons: {
+     icon: "https://q2.qlogo.cn/headimg_dl?dst_uin=2726730791&spec=0",
+   },
