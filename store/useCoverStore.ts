@@ -81,19 +81,28 @@ interface BackgroundSettings {
   rotation: number;
 }
 
-interface CoverState {
+export type CoverPreset = Pick<
+  CoverStateBase,
+  'selectedRatios' | 'showRuler' | 'text' | 'icon' | 'background'
+>;
+
+interface CoverStateBase {
   selectedRatios: AspectRatio[];
   showRuler: boolean;
   text: TextSettings;
   icon: IconSettings;
   background: BackgroundSettings;
+}
 
+interface CoverState extends CoverStateBase {
   // Actions
   toggleRatio: (ratio: AspectRatio) => void;
   setShowRuler: (show: boolean) => void;
+  setSelectedRatios: (ratios: AspectRatio[]) => void;
   updateText: (settings: Partial<TextSettings>) => void;
   updateIcon: (settings: Partial<IconSettings>) => void;
   updateBackground: (settings: Partial<BackgroundSettings>) => void;
+  applyPreset: (preset: CoverPreset) => void;
 }
 
 export const useCoverStore = create<CoverState>((set) => ({
@@ -165,10 +174,20 @@ export const useCoverStore = create<CoverState>((set) => ({
       };
     }),
   setShowRuler: (show) => set({ showRuler: show }),
+  setSelectedRatios: (ratios) =>
+    set(() => ({ selectedRatios: ratios.length ? ratios : ['16:9'] })),
   updateText: (settings) =>
     set((state) => ({ text: { ...state.text, ...settings } })),
   updateIcon: (settings) =>
     set((state) => ({ icon: { ...state.icon, ...settings } })),
   updateBackground: (settings) =>
     set((state) => ({ background: { ...state.background, ...settings } })),
+  applyPreset: (preset) =>
+    set(() => ({
+      selectedRatios: preset.selectedRatios.length ? preset.selectedRatios : ['16:9'],
+      showRuler: preset.showRuler,
+      text: preset.text,
+      icon: preset.icon,
+      background: preset.background,
+    })),
 }));
