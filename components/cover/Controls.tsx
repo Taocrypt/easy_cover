@@ -543,21 +543,17 @@ export default function Controls() {
                     // Accept: EasyCover_YYYYMMDD_hhmmss_CODE or CODE(.png)
                     let code = raw;
                     if (code.endsWith('.png')) code = code.slice(0, -4);
-                    if (code.startsWith('EasyCover_')) {
-                      const lastUnderscore = code.lastIndexOf('_');
-                      if (lastUnderscore > -1) code = code.slice(lastUnderscore + 1);
-                    }
-                    setConfigCode(code);
+                    const m = code.match(/^EasyCover_\d{8}_\d{6}_(.+)$/);
+                    if (m) code = m[1];
+                    setConfigCode(code.trim());
                   }}
                   onPaste={(e) => {
                     const text = e.clipboardData.getData('text');
                     if (!text) return;
                     let code = text.trim();
                     if (code.endsWith('.png')) code = code.slice(0, -4);
-                    if (code.startsWith('EasyCover_')) {
-                      const lastUnderscore = code.lastIndexOf('_');
-                      if (lastUnderscore > -1) code = code.slice(lastUnderscore + 1);
-                    }
+                    const m = code.match(/^EasyCover_\d{8}_\d{6}_(.+)$/);
+                    if (m) code = m[1];
                     code = code.trim();
                     if (!code) return;
                     setConfigCode(code);

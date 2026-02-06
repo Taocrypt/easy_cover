@@ -63,9 +63,13 @@ export function IconPicker({ value, onChange, onPickImageUrl }: IconPickerProps)
     resolution: '512',
     cut: '2',
   });
+  const appStoreOptionsRef = React.useRef<AppStoreOptions>(appStoreOptions);
+  useEffect(() => {
+    appStoreOptionsRef.current = appStoreOptions;
+  }, [appStoreOptions]);
 
   const buildAppStoreIconDataUrl = async (app: AppStoreItem) => {
-    const { resolution, cut } = appStoreOptions;
+    const { resolution, cut } = appStoreOptionsRef.current;
     const artworkUrl512 = app.artworkUrl512 || app.artworkUrl100 || app.artworkUrl60;
     if (!artworkUrl512) return null;
 
