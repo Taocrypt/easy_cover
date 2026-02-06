@@ -24,6 +24,15 @@ interface TextSettings {
   font: string;
   // Split settings
   isSplit: boolean;
+  /**
+   * Split position for text separation.
+   * -1 means auto (midpoint). Value is character index in JS string.
+   */
+  splitIndex: number;
+  /**
+   * Optional separator (e.g. "|") inside content. If present, it overrides splitIndex.
+   */
+  splitSeparator: string;
   leftOffsetX: number;
   leftOffsetY: number;
   rightOffsetX: number;
@@ -102,6 +111,8 @@ export const useCoverStore = create<CoverState>((set) => ({
     rotation: 0,
     font: 'Inter, sans-serif',
     isSplit: false,
+    splitIndex: -1,
+    splitSeparator: '|',
     leftOffsetX: 0,
     leftOffsetY: 0,
     rightOffsetX: 0,

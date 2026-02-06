@@ -445,6 +445,45 @@ export default function Controls() {
                         ))}
                     </div>
 
+                    {/* Split position (custom word break) */}
+                    <div className="space-y-2">
+                        <Label className="text-xs font-semibold">分词位置</Label>
+                        <div className="flex items-center gap-2">
+                            <Input
+                                type="number"
+                                min={-1}
+                                max={Math.max(0, store.text.content.length - 1)}
+                                className="h-7 text-xs"
+                                value={store.text.splitIndex === -1 ? '' : String(store.text.splitIndex)}
+                                placeholder="自动(留空)"
+                                onChange={(e) => {
+                                    const v = e.target.value;
+                                    if (v === '') return store.updateText({ splitIndex: -1 });
+                                    const n = parseInt(v, 10);
+                                    store.updateText({ splitIndex: Number.isFinite(n) ? n : -1 });
+                                }}
+                            />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-[10px] px-2"
+                                onClick={() => store.updateText({ splitIndex: -1 })}
+                            >
+                                自动
+                            </Button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <Label className="text-[10px] text-muted-foreground whitespace-nowrap">分隔符</Label>
+                            <Input
+                                className="h-7 w-16 text-xs"
+                                value={store.text.splitSeparator}
+                                onChange={(e) => store.updateText({ splitSeparator: e.target.value })}
+                            />
+                            <span className="text-[10px] text-muted-foreground">内容里出现分隔符时，会优先生效（例如：前半|后半）</span>
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         <div className="flex items-center justify-between px-1 pb-2">
                             <Label htmlFor="sync-offsets" className="text-xs font-medium">同步调整 (中心对称)</Label>

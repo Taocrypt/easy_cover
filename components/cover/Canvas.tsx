@@ -125,9 +125,23 @@ export default function Canvas() {
       let rightContent = '';
 
       if (text.isSplit && text.content.length > 1) {
-          const mid = Math.ceil(text.content.length / 2);
-          leftContent = text.content.slice(0, mid);
-          rightContent = text.content.slice(mid);
+          const raw = text.content;
+
+          // 1) Separator-based split (highest priority)
+          const sep = text.splitSeparator || '|';
+          const sepIndex = sep ? raw.indexOf(sep) : -1;
+          if (sepIndex > -1) {
+              leftContent = raw.slice(0, sepIndex);
+              rightContent = raw.slice(sepIndex + sep.length);
+          } else {
+              // 2) Index-based split (if valid)
+              const i = Number.isFinite(text.splitIndex) ? text.splitIndex : -1;
+              const clamped = Math.min(Math.max(i, 1), raw.length - 1);
+              const useIndex = i >= 1 && i <= raw.length - 1;
+              const idx = useIndex ? clamped : Math.ceil(raw.length / 2);
+              leftContent = raw.slice(0, idx);
+              rightContent = raw.slice(idx);
+          }
       }
 
       return (
