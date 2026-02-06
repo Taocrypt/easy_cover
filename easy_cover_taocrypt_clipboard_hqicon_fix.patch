@@ -1,0 +1,50 @@
+diff --git a/components/cover/Controls.tsx b/components/cover/Controls.tsx
+index 33b7025..eab3205 100644
+--- a/components/cover/Controls.tsx
++++ b/components/cover/Controls.tsx
+@@ -543,21 +543,17 @@ export default function Controls() {
+                     // Accept: EasyCover_YYYYMMDD_hhmmss_CODE or CODE(.png)
+                     let code = raw;
+                     if (code.endsWith('.png')) code = code.slice(0, -4);
+-                    if (code.startsWith('EasyCover_')) {
+-                      const lastUnderscore = code.lastIndexOf('_');
+-                      if (lastUnderscore > -1) code = code.slice(lastUnderscore + 1);
+-                    }
+-                    setConfigCode(code);
++                    const m = code.match(/^EasyCover_\d{8}_\d{6}_(.+)$/);
++                    if (m) code = m[1];
++                    setConfigCode(code.trim());
+                   }}
+                   onPaste={(e) => {
+                     const text = e.clipboardData.getData('text');
+                     if (!text) return;
+                     let code = text.trim();
+                     if (code.endsWith('.png')) code = code.slice(0, -4);
+-                    if (code.startsWith('EasyCover_')) {
+-                      const lastUnderscore = code.lastIndexOf('_');
+-                      if (lastUnderscore > -1) code = code.slice(lastUnderscore + 1);
+-                    }
++                    const m = code.match(/^EasyCover_\d{8}_\d{6}_(.+)$/);
++                    if (m) code = m[1];
+                     code = code.trim();
+                     if (!code) return;
+                     setConfigCode(code);
+diff --git a/components/cover/IconPicker.tsx b/components/cover/IconPicker.tsx
+index 2780750..6da1dec 100644
+--- a/components/cover/IconPicker.tsx
++++ b/components/cover/IconPicker.tsx
+@@ -63,9 +63,13 @@ export function IconPicker({ value, onChange, onPickImageUrl }: IconPickerProps)
+     resolution: '512',
+     cut: '2',
+   });
++  const appStoreOptionsRef = React.useRef<AppStoreOptions>(appStoreOptions);
++  useEffect(() => {
++    appStoreOptionsRef.current = appStoreOptions;
++  }, [appStoreOptions]);
+ 
+   const buildAppStoreIconDataUrl = async (app: AppStoreItem) => {
+-    const { resolution, cut } = appStoreOptions;
++    const { resolution, cut } = appStoreOptionsRef.current;
+     const artworkUrl512 = app.artworkUrl512 || app.artworkUrl100 || app.artworkUrl60;
+     if (!artworkUrl512) return null;
+ 
